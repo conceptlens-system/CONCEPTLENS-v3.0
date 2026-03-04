@@ -1,0 +1,983 @@
+import { signOut } from "next-auth/react";
+
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
+
+async function apiFetch(input: RequestInfo | URL, init?: RequestInit) {
+    const res = await fetch(input, init);
+    if (res.status === 401) {
+        if (typeof window !== 'undefined') {
+            const event = new CustomEvent('conceptlens-maintenance-active');
+            window.dispatchEvent(event);
+        }
+        throw new Error("Session expired or maintenance mode active");
+    }
+    return res;
+}
+
+export async function fetchStats() {
+    const res = await apiFetch(`${API_URL}/analytics/dashboard/stats`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Failed to fetch stats: ${res.status} ${res.statusText}`);
+    return res.json();
+}
+
+export async function fetchMisconceptions(status: string = "pending") {
+    const res = await apiFetch(`${API_URL}/analytics/misconceptions?status=${status}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Failed to fetch misconceptions: ${res.status} ${res.statusText}`);
+    return res.json();
+}
+
+// Participation
+export const fetchExamParticipation = async (token: string, examId: string) => {
+    try {
+        const response = await apiFetch(`${API_URL}/analytics/exams/${examId}/participation`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error("Failed to fetch participation");
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching participation:", error);
+        return { total_assigned: 0, total_attempted: 0, non_attempted: [] };
+    }
+};
+
+export async function fetchGroupedMisconceptions(status: string = "valid", token: string, examId?: string) {
+    let url = `${API_URL}/analytics/misconceptions/grouped?status=${status}`;
+    if (examId) url += `&exam_id=${examId}`;
+
+    const res = await apiFetch(url, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error(`Failed to fetch grouped misconceptions: ${res.status} ${res.statusText}`);
+    return res.json();
+}
+
+export async function updateMisconceptionStatus(id: string, status: string, token: string) {
+    const res = await apiFetch(`${API_URL}/analytics/misconceptions/${id}/status`, {
+        method: 'PUT',
+        headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ status })
+    });
+    if (!res.ok) throw new Error(`Failed to update status`);
+    return res.json();
+}
+
+export async function fetchTrends(token: string) {
+    console.log("Fetching trends from:", `${API_URL}/analytics/reports/trends`);
+    const res = await apiFetch(`${API_URL}/analytics/reports/trends`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error(`Failed to fetch trends`);
+    return res.json();
+}
+
+
+export async function fetchAssessmentSummaries(token: string) {
+    const res = await apiFetch(`${API_URL}/analytics/assessments`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch assessment summaries");
+    return res.json();
+}
+
+export async function fetchMisconception(id: string) {
+    const res = await apiFetch(`${API_URL}/analytics/misconceptions/${id}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Failed to fetch detail: ${res.status} ${res.statusText}`);
+    return res.json();
+}
+
+export async function generateRemediationPlan(id: string, token: string) {
+    const res = await apiFetch(`${API_URL}/analytics/misconceptions/${id}/remediation-plan`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error(`Failed to generate remediation plan`);
+    return res.json();
+}
+
+export async function askMisconceptionAI(id: string, message: string, token: string) {
+    const res = await apiFetch(`${API_URL}/analytics/misconceptions/${id}/chat`, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ message })
+    });
+    if (!res.ok) throw new Error(`Failed to chat`);
+    return res.json();
+}
+
+export async function downloadExamPdf(examId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/analytics/exams/${examId}/pdf-report`, {
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) {
+        let errorMsg = "Failed to generate PDF";
+        try {
+            const errorData = await res.json();
+            errorMsg = errorData.detail || errorMsg;
+        } catch {
+            errorMsg = await res.text() || errorMsg;
+        }
+        throw new Error(`Failed to generate PDF: ${res.status} - ${errorMsg}`);
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Exam_Report_${examId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+export async function validateMisconception(id: string, action: "approve" | "reject" | "rename" | "prioritize" | "deprioritize", label?: string) {
+    const res = await apiFetch(`${API_URL}/teacher/misconceptions/${id}/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, new_label: label }),
+    });
+    if (!res.ok) throw new Error(`Validation failed: ${res.status} ${res.statusText}`);
+    return res.json();
+}
+
+export async function ingestResponses(data: any[]) {
+    // data is list of { student_id, question_id, response_text, assessment_id }
+    const res = await apiFetch(`${API_URL}/ingest/responses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Ingestion failed: ${res.status} ${res.statusText}`);
+    return res.json();
+}
+
+export async function fetchSubjects(token: string) {
+    const res = await apiFetch(`${API_URL}/subjects/`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error(`Failed to fetch subjects: ${res.status} ${res.statusText}`);
+    return res.json();
+}
+
+export async function createSubject(name: string, token: string, semester?: string, branches: string[] = [], sections: string[] = [], syllabus: any[] = []) {
+    const res = await apiFetch(`${API_URL}/subjects/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ name, semester, branches, sections, syllabus }),
+    });
+    if (!res.ok) throw new Error(`Failed to create subject: ${res.status} ${res.statusText}`);
+    return res.json();
+}
+
+export async function updateSyllabus(subjectId: string, syllabus: any[], token: string) {
+    const res = await apiFetch(`${API_URL}/subjects/${subjectId}/syllabus`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(syllabus),
+    });
+    if (!res.ok) throw new Error(`Failed to update syllabus: ${res.status} ${res.statusText}`);
+    return res.json();
+}
+
+export async function updateSubjectMetadata(subjectId: string, updates: { name?: string, semester?: string, branches?: string[], sections?: string[] }, token: string) {
+    const res = await apiFetch(`${API_URL}/subjects/${subjectId}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error("Failed to update subject metadata");
+    return res.json();
+}
+
+export async function deleteSubject(subjectId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/subjects/${subjectId}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error(`Failed to delete subject: ${res.status} ${res.statusText}`);
+    return res.json();
+}
+
+export async function fetchExams(token: string) {
+    const res = await apiFetch(`${API_URL}/exams/`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (res.status === 401) {
+        window.location.href = '/login?maintenance=true';
+        throw new Error("Session expired or maintenance mode active");
+    }
+    if (!res.ok) {
+        throw new Error(`Failed to fetch exams: ${res.status} ${res.statusText}`);
+    }
+    return res.json();
+}
+
+export async function createExam(examData: any, token: string) {
+    console.log("------------------------------------------");
+    console.log("🚀 CREATE EXAM DEBUGGER");
+    console.log("API_URL:", API_URL);
+    console.log("Token:", token ? `Yes (len: ${token.length})` : "MISSING/NULL");
+    console.log("Method:", "POST");
+
+    // Safeguard: Deep Clean Payload
+    const payload = JSON.parse(JSON.stringify(examData));
+
+    // Remove top-level system fields
+    if (payload._id) delete payload._id;
+    if (payload.id) delete payload.id;
+    if (payload.created_at) delete payload.created_at;
+    if (payload.updated_at) delete payload.updated_at;
+
+    // Clean questions
+    if (payload.questions && Array.isArray(payload.questions)) {
+        payload.questions = payload.questions.map((q: any) => {
+            const cleanQ = { ...q };
+            if (cleanQ._id) delete cleanQ._id; // Remove Mongo ID if present
+            // Ensure ID exists (but only client-side ID)
+            if (!cleanQ.id) cleanQ.id = `q_${Math.random().toString(36).substr(2, 9)}`;
+            return cleanQ;
+        });
+    }
+
+    console.log("Sanitized Payload:", JSON.stringify(payload, null, 2));
+
+    // Proxy Change: Call Next.js API route instead of direct Backend URL
+    // This avoids CORS because browser -> Next.js (Same Origin) -> Backend (Server-to-Server)
+    console.log(`📤 Front-end Fetch sending token: ${token ? 'YES' : 'NO'} (Length: ${token?.length || 0})`);
+
+    const res = await apiFetch("/api/exams", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("❌ CREATE EXAM FAILED:", errorData);
+        throw new Error(errorData.detail || errorData.error || "Failed to create exam");
+    }
+
+    return res.json();
+}
+
+
+export async function fetchExam(id: string) {
+    const res = await apiFetch(`${API_URL}/exams/${id}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error("Failed to fetch exam");
+    return res.json();
+}
+
+export async function updateExam(id: string, examData: any, token: string) {
+    const res = await apiFetch(`${API_URL}/exams/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(examData),
+    });
+    if (!res.ok) throw new Error("Failed to update exam");
+    return res.json();
+}
+
+
+
+export async function deleteExam(id: string, token: string) {
+    const res = await apiFetch(`${API_URL}/exams/${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to delete exam");
+    return res.json();
+}
+
+export async function fetchExamStudents(id: string, token: string) {
+    const res = await apiFetch(`${API_URL}/exams/${id}/students`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch students");
+    return res.json();
+}
+
+export async function validateExam(id: string, isValidated: boolean, token: string) {
+    const res = await apiFetch(`${API_URL}/exams/${id}/validate`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ is_validated: isValidated }),
+    });
+    if (!res.ok) throw new Error("Failed to update validation status");
+    return res.json();
+}
+
+export async function scheduleExamPublish(id: string, scheduledTime: string, token: string) {
+    const res = await apiFetch(`${API_URL}/exams/${id}/schedule_exam_publish`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ scheduled_time: scheduledTime }),
+    });
+    if (!res.ok) {
+        let errorMsg = "Failed to schedule exam publish";
+        try {
+            const data = await res.json();
+            errorMsg = data.detail || errorMsg;
+        } catch { }
+        throw new Error(errorMsg);
+    }
+    return res.json();
+}
+
+export async function publishResults(examId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/exams/${examId}/publish`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to publish results");
+    return res.json();
+}
+
+export async function fetchExamStudentsScores(id: string, token: string) {
+    const res = await apiFetch(`${API_URL}/exams/${id}/students_scores`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch student scores");
+    return res.json();
+}
+// --- Class Management ---
+
+export async function fetchClasses(token: string) {
+    const res = await apiFetch(`${API_URL}/classes/`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Failed to fetch classes");
+    }
+    return res.json();
+}
+
+export async function deleteClass(classId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/classes/${classId}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to delete class");
+    return res.json();
+}
+
+export async function createClass(data: any, token: string) {
+    const res = await apiFetch(`${API_URL}/classes/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Failed to create class");
+    }
+    return res.json();
+}
+
+export async function updateClass(classId: string, data: any, token: string) {
+    const res = await apiFetch(`${API_URL}/classes/${classId}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Failed to update class");
+    }
+    return res.json();
+}
+
+export async function joinClass(classCode: string, token: string) {
+    const res = await apiFetch(`${API_URL}/classes/join`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ class_code: classCode }),
+    });
+    const data = await res.json().catch(() => ({ detail: res.statusText }));
+    if (!res.ok) throw new Error(data.detail || "Failed to join class");
+    return data;
+}
+
+export async function fetchClassRequests(classId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/classes/${classId}/requests`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch requests");
+    return res.json();
+}
+
+export async function approveClassRequest(classId: string, requestId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/classes/${classId}/requests/${requestId}/approve`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to approve request");
+    return res.json();
+}
+
+export async function rejectClassRequest(classId: string, requestId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/classes/${classId}/requests/${requestId}/reject`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to reject request");
+    return res.json();
+}
+
+export async function fetchClass(classId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/classes/${classId}`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch class details");
+    return res.json();
+}
+
+export async function fetchClassStudents(classId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/classes/${classId}/students`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch class students");
+    return res.json();
+}
+
+export async function removeStudentFromClass(classId: string, studentId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/classes/${classId}/students/${studentId}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to remove student");
+    return res.json();
+}
+
+export async function createAnnouncement(classId: string, title: string, content: string, token: string) {
+    const res = await apiFetch(`${API_URL}/classes/${classId}/announcements`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ title, content }),
+    });
+    if (!res.ok) throw new Error("Failed to create announcement");
+    return res.json();
+}
+
+export async function fetchAnnouncements(classId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/classes/${classId}/announcements`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch announcements");
+    return res.json();
+}
+
+export async function fetchMyResult(examId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/exams/${examId}/my_result`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to fetch result");
+    }
+    return res.json();
+}
+
+export async function schedulePublishResults(examId: string, scheduledTime: string, token: string) {
+    const res = await apiFetch(`${API_URL}/exams/${examId}/schedule_publish`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ scheduled_time: scheduledTime })
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to schedule publish");
+    }
+    return res.json();
+}
+// --- Notifications ---
+export async function fetchNotifications(token: string) {
+    const res = await apiFetch(`${API_URL}/notifications/`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch notifications");
+    return res.json();
+}
+
+export async function markNotificationRead(id: string, token: string) {
+    const res = await apiFetch(`${API_URL}/notifications/${id}/read`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to mark as read");
+    return res.json();
+}
+
+export async function markAllNotificationsRead(token: string) {
+    const res = await apiFetch(`${API_URL}/notifications/read-all`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to mark all as read");
+    return res.json();
+}
+
+export async function deleteNotification(id: string, token: string) {
+    const res = await apiFetch(`${API_URL}/notifications/${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+    })
+    if (!res.ok) throw new Error("Failed to delete notification");
+    return res.json();
+}
+
+// --- Professor Onboarding (Admin) ---
+
+export async function fetchProfessorRequests() {
+    const res = await apiFetch(`${API_URL}/users/requests`, { cache: 'no-store' });
+    if (!res.ok) throw new Error("Failed to fetch requests");
+    return res.json();
+}
+
+export async function approveProfessorRequest(id: string) {
+    const res = await apiFetch(`${API_URL}/users/requests/${id}/approve`, {
+        method: "POST",
+    });
+    if (!res.ok) throw new Error("Failed to approve");
+    return res.json();
+}
+
+// --- Institutes & Onboarding ---
+
+export async function fetchInstitutes() {
+    const res = await apiFetch(`${API_URL}/institutions/`, { cache: 'no-store' });
+    if (!res.ok) throw new Error("Failed to fetch institutes");
+    return res.json();
+}
+
+export async function createInstitute(data: any) {
+    const res = await apiFetch(`${API_URL}/institutions/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Failed to create institute");
+    return res.json();
+}
+
+export async function deleteInstitute(id: string) {
+    const res = await apiFetch(`${API_URL}/institutions/${id}`, {
+        method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Failed to delete institute");
+    return res.json();
+}
+
+export async function fetchUsers(role?: string) {
+    const url = role ? `${API_URL}/users/?role=${role}` : `${API_URL}/users/`;
+    const res = await apiFetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error("Failed to fetch users");
+    return res.json();
+}
+
+export async function createUser(data: any) {
+    const res = await apiFetch(`${API_URL}/users/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Failed to create user");
+    }
+    return res.json();
+}
+
+export async function deleteUser(id: string) {
+    const res = await apiFetch(`${API_URL}/users/${id}`, {
+        method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Failed to delete user");
+    return res.json();
+}
+
+// --- User Profiles ---
+
+export async function fetchUserProfile(token: string) {
+    const res = await apiFetch(`${API_URL}/auth/profile/me`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch profile");
+    return res.json();
+}
+
+export async function updateUserProfile(data: any, token: string) {
+    const res = await apiFetch(`${API_URL}/auth/profile`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Failed to update profile");
+    }
+    return res.json();
+}
+
+export async function fetchPublicProfile(userId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/auth/profile/${userId}`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    return res.json();
+}
+
+export async function changePassword(data: any, token: string) {
+    const res = await apiFetch(`${API_URL}/auth/change-password`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Failed to change password");
+    }
+    return res.json();
+}
+
+export async function generateExam(subjectId: string, count: number, difficulty: string, token: string, units?: string[]) {
+    const res = await apiFetch(`${API_URL}/ai-exams/generate`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ subject_id: subjectId, question_count: count, difficulty, units })
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to generate exam");
+    }
+    return res.json();
+}
+
+// --- Specific Subject ---
+export const fetchSubject = async (id: string, token: string) => {
+    const res = await apiFetch(`${API_URL}/subjects/${id}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+    })
+    if (!res.ok) throw new Error("Failed to fetch subject")
+    return res.json()
+}
+
+// --- Student Analytics ---
+
+export async function fetchStudentMastery(token: string) {
+    const res = await apiFetch(`${API_URL}/analytics/student/mastery`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch mastery data");
+    return res.json();
+}
+
+export async function fetchStudentFocusAreas(token: string) {
+    const res = await apiFetch(`${API_URL}/analytics/student/focus-areas`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch focus areas");
+    return res.json();
+}
+
+export async function generateStudentStudyPlan(data: { topic: string, struggle: string }, token: string) {
+    const res = await apiFetch(`${API_URL}/analytics/student/study-plan`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Failed to generate study plan");
+    }
+    return res.json();
+}
+
+// --- Admin Analytics & Settings ---
+
+export async function fetchAdminMetrics(token: string) {
+    const res = await apiFetch(`${API_URL}/admin-analytics/metrics`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch admin metrics");
+    return res.json();
+}
+
+export async function fetchGlobalSettings(token: string) {
+    const res = await apiFetch(`${API_URL}/settings/`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.status === 401) {
+        window.location.href = '/login?maintenance=true';
+        throw new Error("Session expired or maintenance mode active");
+    }
+    if (!res.ok) throw new Error("Failed to fetch global settings");
+    return res.json();
+}
+
+export async function updateGlobalSettings(token: string, data: any) {
+    const res = await apiFetch(`${API_URL}/settings/`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to update global settings");
+    return res.json();
+}
+
+// --- Announcements & Audit Logs ---
+
+export async function fetchPublicSettings() {
+    const res = await apiFetch(`${API_URL}/settings/public`, { cache: 'no-store' });
+    if (!res.ok) throw new Error("Failed to fetch public settings");
+    return res.json();
+}
+
+export async function fetchGlobalAnnouncements(token?: string, activeOnly: boolean = false) {
+    const url = `${API_URL}/announcements/?active_only=${activeOnly}`;
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await apiFetch(url, { headers });
+    if (!res.ok) throw new Error("Failed to fetch announcements");
+    return res.json();
+}
+
+export async function createGlobalAnnouncement(token: string, data: { title: string, message: string, type: string, active: boolean }) {
+    const res = await apiFetch(`${API_URL}/announcements/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to create announcement");
+    return res.json();
+}
+
+export async function toggleGlobalAnnouncement(token: string, id: string, active: boolean) {
+    const res = await apiFetch(`${API_URL}/announcements/${id}/toggle`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ active })
+    });
+    if (!res.ok) throw new Error("Failed to toggle announcement");
+    return res.json();
+}
+
+export async function deleteGlobalAnnouncement(token: string, id: string) {
+    const res = await apiFetch(`${API_URL}/announcements/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to delete announcement");
+    return res.json();
+}
+
+export async function fetchAuditLogs(token: string, limit: number = 200, date?: string) {
+    let url = `${API_URL}/audit-logs/?limit=${limit}`;
+    if (date) {
+        url += `&date=${encodeURIComponent(date)}`;
+    }
+    const res = await apiFetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch audit logs");
+    return res.json();
+}
+
+export async function fetchAiUsageMetrics(token: string, days: number = 30) {
+    const res = await apiFetch(`${API_URL}/ai-usage/metrics?days=${days}`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch AI usage metrics");
+    return res.json();
+}
+
+export async function fetchSecurityConfig(token: string) {
+    const res = await apiFetch(`${API_URL}/server/security`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch security config");
+    return res.json();
+}
+
+export async function updateSecurityConfig(token: string, payload: any) {
+    const res = await apiFetch(`${API_URL}/server/security`, {
+        method: 'PUT',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("Failed to update security config");
+    return res.json();
+}
+
+export async function triggerDatabaseBackup(token: string) {
+    const res = await apiFetch(`${API_URL}/server/backup`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to trigger database backup");
+
+    // Handle file download
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+
+    // Parse filename from headers if possible, otherwise use default
+    const disposition = res.headers.get('content-disposition');
+    let filename = 'conceptlens_backup.json';
+    if (disposition && disposition.indexOf('filename=') !== -1) {
+        filename = disposition.split('filename=')[1].replace(/"/g, '');
+    }
+
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    return { success: true, message: "Backup downloaded successfully" };
+}
+
+// Gamification and Practice (Student Phase 1)
+export async function generatePracticeQuiz(subjectId: string, topic: string, token: string) {
+    const res = await apiFetch(`${API_URL}/practice/generate`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ subject_id: subjectId, topic, question_count: 5, difficulty: "Medium" })
+    });
+    if (!res.ok) {
+        let errorMsg = "Failed to generate practice quiz";
+        try {
+            const errorData = await res.json();
+            errorMsg = errorData.detail || errorMsg;
+        } catch (e) {
+            // ignore
+        }
+        throw new Error(errorMsg);
+    }
+    return res.json();
+}
+
+export async function submitPracticeResult(subjectId: string, topic: string, score: number, totalQuestions: number, difficulty: string, token: string) {
+    const res = await apiFetch(`${API_URL}/practice/submit`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ subject_id: subjectId, topic, score, total_questions: totalQuestions, difficulty })
+    });
+    if (!res.ok) throw new Error("Failed to submit practice result");
+    return res.json();
+}
+
+
+export async function fetchClassLeaderboard(classId: string, token: string) {
+    const res = await apiFetch(`${API_URL}/leaderboard/class/${classId}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch class leaderboard");
+    return res.json();
+}
+
+export async function fetchStudentCareerMapping(token: string) {
+    const res = await apiFetch(`${API_URL}/analytics/student/career-mapping`, {
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch career mapping");
+    return res.json();
+}
+
+export async function fetchPracticeHistory(token: string, page: number = 1, limit: number = 9) {
+    const res = await apiFetch(`${API_URL}/practice/history?page=${page}&limit=${limit}`, {
+        cache: 'no-store',
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch practice history");
+    return res.json();
+}
