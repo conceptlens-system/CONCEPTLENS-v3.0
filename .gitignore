@@ -15,14 +15,3 @@ TO-DO-LIST.docx
 backend/.env
 backend/.env.local
 *.env
-
-# Debug and analysis output
-debug_*.py
-debug_*.txt
-*.ps1
-*.mjs
-*_loc.txt
-loc_results.txt
-recover_*.py
-check_cors.py
-seed_scores.py
