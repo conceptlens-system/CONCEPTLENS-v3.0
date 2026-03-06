@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
 from app.db.mongodb import get_database
 from app.core.security import get_current_user
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
+import calendar
+from bson import ObjectId
 
 router = APIRouter()
 
@@ -16,40 +18,92 @@ async def get_admin_metrics(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Not authorized")
         
     db = await get_database()
+    current_date = datetime.now(timezone.utc)
     
-    # Simple data aggregation for charts (Last 6 months)
-    # Since this is MVP, we will generate some semi-mocked historical trends 
-    # based on actual total counts plus generated variation for visual effect.
+    # Initialize the last 6 months keys and structures
+    months_keys = []
+    for i in range(5, -1, -1):
+        m = current_date.month - i
+        y = current_date.year
+        while m <= 0:
+            m += 12
+            y -= 1
+        months_keys.append((y, m))
+        
+    start_y, start_m = months_keys[0]
     
-    total_users = await db["users"].count_documents({})
-    total_institutions = await db["institutions"].count_documents({})
-    total_exams = await db["exams"].count_documents({})
+    def is_before_window(dt):
+        if dt.year < start_y:
+            return True
+        if dt.year == start_y and dt.month < start_m:
+            return True
+        return False
+
+    def get_date_from_doc(doc, date_field="created_at"):
+        if date_field in doc and isinstance(doc[date_field], datetime):
+            return doc[date_field]
+        if "_id" in doc and isinstance(doc["_id"], ObjectId):
+            return doc["_id"].generation_time
+        return None
+
+    counts = {
+        "Users": {key: 0 for key in months_keys},
+        "Institutions": {key: 0 for key in months_keys},
+        "Exams": {key: 0 for key in months_keys},
+        "Classes": {key: 0 for key in months_keys}
+    }
     
-    # Generate 6 months data ending current month
-    current_month = datetime.utcnow().month
-    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    running_totals = {
+        "Users": 0,
+        "Institutions": 0,
+        "Exams": 0,
+        "Classes": 0
+    }
     
+    async def process_collection(collection_name, doc_type, date_field="created_at"):
+        cursor = db[collection_name].find({}, {"_id": 1, date_field: 1})
+        docs = await cursor.to_list(length=10000)
+        for doc in docs:
+            dt = get_date_from_doc(doc, date_field)
+            if dt:
+                # Ensure dt is timezone aware
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                if is_before_window(dt):
+                    running_totals[doc_type] += 1
+                else:
+                    key = (dt.year, dt.month)
+                    if key in counts[doc_type]:
+                        counts[doc_type][key] += 1
+
+    await process_collection("users", "Users")
+    await process_collection("institutions", "Institutions", "joined_at")
+    await process_collection("exams", "Exams")
+    await process_collection("classes", "Classes")
+
     adoption_data = []
     platform_usage = []
     
-    # Generate realistic-looking historical data scaling up to current totals
-    for i in range(5, -1, -1):
-        m_idx = (current_month - 1 - i) % 12
-        month_name = months[m_idx]
+    for key in months_keys:
+        y, m = key
+        month_name = f"{calendar.month_abbr[m]} {y}"
         
-        # Scaling factor to make a nice upward trend
-        scale = (6 - i) / 6.0
+        running_totals["Users"] += counts["Users"][key]
+        running_totals["Institutions"] += counts["Institutions"][key]
+        running_totals["Exams"] += counts["Exams"][key]
+        running_totals["Classes"] += counts["Classes"][key]
         
         adoption_data.append({
             "name": month_name,
-            "Users": max(1, int(total_users * scale * (0.8 + 0.4 * (i%2)))),
-            "Institutions": max(1, int(total_institutions * scale * (0.9 + 0.2 * (i%2))))
+            "Users": running_totals["Users"],
+            "Institutions": running_totals["Institutions"]
         })
         
+        # Absolute monthly usage for the bar chart
         platform_usage.append({
             "name": month_name,
-            "Exams Created": max(1, int(total_exams * scale * (0.7 + 0.6 * (i%2)))),
-            "Active Classes": max(1, int(total_users * 0.5 * scale))
+            "Exams Created": counts["Exams"][key],
+            "Active Classes": counts["Classes"][key]
         })
 
     return {

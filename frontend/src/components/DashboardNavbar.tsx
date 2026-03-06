@@ -64,7 +64,7 @@ export function DashboardNavbar() {
         { href: "/professor/classes", label: "Classes", icon: Users },
         { href: "/professor/exams", label: "Exams", icon: ClipboardList },
         { href: "/professor/misconceptions", label: "Misconceptions", icon: AlertCircle },
-        { href: "/professor/reports", label: "Reports", icon: BarChart3 },
+
         { href: "/professor/leaderboard", label: "Leaderboard", icon: Trophy },
     ]
 
@@ -94,7 +94,7 @@ export function DashboardNavbar() {
 
     return (
         <nav className="sticky top-0 z-50 w-full border-b bg-white/80 dark:bg-black/80 backdrop-blur-xl">
-            <div className="container flex h-16 items-center justify-between px-4 md:px-8">
+            <div className="w-full flex h-16 items-center justify-between px-6 md:px-12 gap-4">
                 {/* Logo Section */}
                 <div className="flex items-center gap-2 font-bold text-xl text-slate-900 dark:text-white mr-8">
                     <Link href={isAdmin ? "/admin" : isProfessor ? "/professor" : isStudent ? "/student" : "/"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -179,7 +179,7 @@ export function DashboardNavbar() {
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem asChild>
-                                <Link href={isStudent ? "/student/profile" : "/professor/profile"}>
+                                <Link href={isAdmin ? "/admin/profile" : isStudent ? "/student/profile" : "/professor/profile"}>
                                     <User className="mr-2 h-4 w-4" />
                                     <span>Profile</span>
                                 </Link>

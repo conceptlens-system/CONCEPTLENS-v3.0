@@ -50,12 +50,7 @@ async def login(user_in: UserLogin, db = Depends(get_database)):
         if user.get("role") != "admin":
             raise HTTPException(status_code=403, detail="Platform is currently offline for maintenance. Please try again later.")
             
-    # Check if user uses Google Auth
-    if user.get("auth_provider") == "google":
-         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please use Google Sign-In for this account"
-        )
+    # Allow any account to log in with an email/password if the password matches.
 
     if not verify_password(user_in.password, user.get("hashed_password")):
         raise HTTPException(

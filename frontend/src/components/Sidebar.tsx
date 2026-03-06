@@ -45,6 +45,7 @@ export function Sidebar({ className, onLinkClick }: SidebarProps) {
         { href: "/admin/users", label: "Users", icon: Users },
         { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
         { href: "/admin/settings", label: "Settings", icon: Settings },
+        { href: "/admin/profile", label: "Profile", icon: User },
     ]
 
     const professorLinks = [
@@ -53,7 +54,6 @@ export function Sidebar({ className, onLinkClick }: SidebarProps) {
         { href: "/professor/misconceptions", label: "Misconceptions", icon: AlertCircle },
         { href: "/professor/inbox", label: "Inbox", icon: Mail, badge: unreadCount },
         { href: "/professor/classes", label: "My Classes", icon: Users },
-        { href: "/professor/reports", label: "Reports", icon: BarChart3 },
         { href: "/professor/profile", label: "Profile", icon: User },
     ]
 

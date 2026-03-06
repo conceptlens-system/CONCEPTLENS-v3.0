@@ -93,9 +93,6 @@ export default function AdminDashboard() {
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">CONCEPTLENS Admin Panel</h1>
                     <p className="text-slate-500 mt-1">Manage system infrastructure, user roles, and access requests.</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Button variant="outline" className="shadow-sm">System Logs</Button>
-                </div>
             </header>
 
             {/* KPI Row */}
@@ -690,7 +687,7 @@ function ContactMessagesList({ messages, setMessages, token }: { messages: any[]
     const handleMarkSeen = async (id: string) => {
         try {
             if (!token) return;
-            const res = await fetch(`http://localhost:8000/api/v1/contact/${id}/seen`, {
+            const res = await fetch(`${API_URL}/contact/${id}/seen`, {
                 method: "PATCH",
                 headers: { Authorization: `Bearer ${token}` }
             })
@@ -709,7 +706,7 @@ function ContactMessagesList({ messages, setMessages, token }: { messages: any[]
     const handleDeleteMessage = async (id: string) => {
         try {
             if (!token) return;
-            const res = await fetch(`http://localhost:8000/api/v1/contact/${id}`, {
+            const res = await fetch(`${API_URL}/contact/${id}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` }
             })
