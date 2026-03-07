@@ -687,7 +687,7 @@ function ContactMessagesList({ messages, setMessages, token }: { messages: any[]
     const handleMarkSeen = async (id: string) => {
         try {
             if (!token) return;
-            const res = await fetch(`${API_URL}/contact/${id}/seen`, {
+            const res = await fetch(`http://localhost:8000/api/v1/contact/${id}/seen`, {
                 method: "PATCH",
                 headers: { Authorization: `Bearer ${token}` }
             })
@@ -706,7 +706,7 @@ function ContactMessagesList({ messages, setMessages, token }: { messages: any[]
     const handleDeleteMessage = async (id: string) => {
         try {
             if (!token) return;
-            const res = await fetch(`${API_URL}/contact/${id}`, {
+            const res = await fetch(`http://localhost:8000/api/v1/contact/${id}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` }
             })

@@ -1,9 +1,6 @@
 import { signOut } from "next-auth/react";
 
-const isServer = typeof window === 'undefined';
-export const API_URL = isServer
-    ? (process.env.NEXT_PUBLIC_INTERNAL_API_URL || "http://127.0.0.1:8000/api/v1")
-    : "/api/v1";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
 
 async function apiFetch(input: RequestInfo | URL, init?: RequestInit) {
     const res = await fetch(input, init);
