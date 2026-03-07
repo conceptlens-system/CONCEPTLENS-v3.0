@@ -57,14 +57,16 @@ async def approve_request(request_id: str):
         raise HTTPException(status_code=400, detail=f"Request is {req['status']}")
         
     # Handle new institution creation if requested
-    institution_id = req.get("institution_id")
+    # As per new requirements, we just store the manually entered Institute name on the User Profile
+    institution_id = None
     if req.get("new_institution_name"):
+        # We optionally create an institution record for admin visibility
         new_inst = {
             "name": req["new_institution_name"],
-            "type": "College", # Defaulting to College as per focus
-            "location": f"{req.get('city', '')}, {req.get('state', '')}".strip(", "),
-            "state": req.get("state"),
+            "type": req.get("purpose", "College"), # Dynamic purpose
+            "location": f"{req.get('city', '')}, {req.get('country', '')}".strip(", "),
             "city": req.get("city"),
+            "country": req.get("country"),
             "domains": [],
             "subscription_status": "Active",
             "joined_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
@@ -84,10 +86,14 @@ async def approve_request(request_id: str):
         "hashed_password": get_password_hash("professor123"), # Default logic for now
         "role": "professor",
         "institution_id": institution_id,
-        "department": req.get("department", req.get("subject_expertise")), # Mapping expertise to department/subjects
-        "subjects": [req["subject_expertise"]],
+        "institute_name": req.get("new_institution_name"),
+        "country": req.get("country"),
+        "city": req.get("city"),
+        "department": req.get("department", ""),
+        "subjects": [req.get("subject_expertise")] if req.get("subject_expertise") else [],
         "designation": req.get("designation"),
         "employee_id": req.get("employee_id"),
+        "additional_info": req.get("additional_info"),
         "linkedin_url": req.get("linkedin_url"),
         "auth_provider": "local",
         "is_active": True

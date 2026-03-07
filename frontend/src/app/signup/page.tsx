@@ -15,6 +15,9 @@ export default function SignupPage() {
     const router = useRouter()
     const [name, setName] = useState("")
     const [email, setEmail] = useState("")
+    const [country, setCountry] = useState("")
+    const [city, setCity] = useState("")
+    const [institute, setInstitute] = useState("")
     const [password, setPassword] = useState("")
     const [isLoading, setIsLoading] = useState(false)
 
@@ -30,6 +33,9 @@ export default function SignupPage() {
                     email,
                     password,
                     full_name: name,
+                    country,
+                    city,
+                    institute_name: institute
                 }),
             })
 
@@ -96,6 +102,44 @@ export default function SignupPage() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="h-11"
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="country">Country</Label>
+                                <Input
+                                    id="country"
+                                    placeholder="e.g. India"
+                                    disabled={isLoading}
+                                    value={country}
+                                    onChange={(e) => setCountry(e.target.value)}
+                                    className="h-11"
+                                    required
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="city">City</Label>
+                                <Input
+                                    id="city"
+                                    placeholder="e.g. Mumbai"
+                                    disabled={isLoading}
+                                    value={city}
+                                    onChange={(e) => setCity(e.target.value)}
+                                    className="h-11"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="institute">Institute / College / University</Label>
+                            <Input
+                                id="institute"
+                                placeholder="Enter full institution name"
+                                disabled={isLoading}
+                                value={institute}
+                                onChange={(e) => setInstitute(e.target.value)}
+                                className="h-11"
+                                required
                             />
                         </div>
                         <div className="grid gap-2">

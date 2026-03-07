@@ -294,48 +294,56 @@ export default function AdminDashboard() {
                                     </div>
                                 ) : (
                                     <div className="rounded-md border border-slate-100 overflow-hidden">
-                                        <Table>
-                                            <TableHeader className="bg-slate-50">
-                                                <TableRow>
-                                                    <TableHead>Name</TableHead>
-                                                    <TableHead>Email</TableHead>
-                                                    <TableHead>Institution</TableHead>
-                                                    <TableHead>Subject</TableHead>
-                                                    <TableHead className="text-right">Action</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {profRequests.map((r) => (
-                                                    <TableRow key={r._id} className="hover:bg-slate-50/50">
-                                                        <TableCell className="font-medium">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center">
-                                                                    {r.full_name?.[0] || '?'}
-                                                                </div>
-                                                                {r.full_name}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-slate-600">{r.email}</TableCell>
-                                                        <TableCell className="text-slate-600">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <Building className="h-3.5 w-3.5 text-slate-400" />
-                                                                {institutes[r.institution_id] || "Unknown Institute"}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-                                                                {r.subject_expertise}
-                                                            </span>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => handleApproveProf(r._id)}>
-                                                                Approve Request
-                                                            </Button>
-                                                        </TableCell>
+                                        <div className="max-h-[400px] overflow-y-auto">
+                                            <Table>
+                                                <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
+                                                    <TableRow>
+                                                        <TableHead>Name</TableHead>
+                                                        <TableHead>Email</TableHead>
+                                                        <TableHead>Institution</TableHead>
+                                                        <TableHead>Subject</TableHead>
+                                                        <TableHead className="text-right">Action</TableHead>
                                                     </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {profRequests.map((r) => (
+                                                        <TableRow key={r._id} className="hover:bg-slate-50/50">
+                                                            <TableCell className="font-medium">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center">
+                                                                        {r.full_name?.[0] || '?'}
+                                                                    </div>
+                                                                    {r.full_name}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="text-slate-600">{r.email}</TableCell>
+                                                            <TableCell className="text-slate-600">
+                                                                <div className="flex flex-col gap-1">
+                                                                    <div className="flex items-center gap-1.5 font-medium text-slate-900">
+                                                                        <Building className="h-3.5 w-3.5 text-slate-400" />
+                                                                        {r.new_institution_name || institutes[r.institution_id] || "Unknown Institute"}
+                                                                    </div>
+                                                                    <div className="text-xs text-slate-500 flex gap-1 items-center">
+                                                                        <span>{r.city ? `${r.city},` : ""} {r.country}</span>
+                                                                        {r.purpose && <span className="ml-1 px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px]">{r.purpose}</span>}
+                                                                    </div>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                                                                    {r.subject_expertise}
+                                                                </span>
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => handleApproveProf(r._id)}>
+                                                                    Approve Request
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
                                     </div>
                                 )}
                             </CardContent>

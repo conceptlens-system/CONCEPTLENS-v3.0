@@ -25,6 +25,7 @@ class InstitutionBase(BaseModel):
     location: str
     state: Optional[str] = None
     city: Optional[str] = None
+    country: Optional[str] = None
     domains: List[str] = []
     subscription_status: str = "Active"
 
@@ -73,6 +74,8 @@ class UserBase(BaseModel):
     department: Optional[str] = None
     branch: Optional[str] = None
     institute_name: Optional[str] = None # Text field as requested
+    country: Optional[str] = None
+    city: Optional[str] = None
     degree: Optional[str] = None # For Students (e.g. B.Tech)
     current_semester: Optional[int] = None # For Students (e.g. 1)
     
@@ -87,6 +90,7 @@ class UserBase(BaseModel):
     # NEW fields for Professor verification:
     designation: Optional[str] = None
     employee_id: Optional[str] = None
+    additional_info: Optional[str] = None
 
     institution_id: Optional[str] = None
     auth_provider: str = "email" # email, google
@@ -190,15 +194,15 @@ class ProfessorRequest(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     full_name: str
     email: EmailStr
-    institution_id: Optional[str] = None
     new_institution_name: Optional[str] = None
-    state: Optional[str] = None
-    city: Optional[str] = None
-    subject_expertise: str
-    
-    department: str
-    designation: str
+    country: str = ""
+    city: str = ""
+    purpose: str = "Unknown"
+    subject_expertise: Optional[str] = None
+    department: Optional[str] = None
+    designation: Optional[str] = None
     employee_id: Optional[str] = None
+    additional_info: Optional[str] = None
     linkedin_url: Optional[str] = None
     
     status: str = "PENDING" # PENDING, APPROVED, REJECTED
@@ -212,14 +216,15 @@ class ProfessorRequest(BaseModel):
 class ProfessorRequestCreate(BaseModel):
     full_name: str
     email: EmailStr
-    institution_id: Optional[str] = None
     new_institution_name: Optional[str] = None
-    state: Optional[str] = None
-    city: Optional[str] = None
-    subject_expertise: str
-    department: str
-    designation: str
+    country: str
+    city: str
+    purpose: str
+    subject_expertise: Optional[str] = None
+    department: Optional[str] = None
+    designation: Optional[str] = None
     employee_id: Optional[str] = None
+    additional_info: Optional[str] = None
     linkedin_url: Optional[str] = None
 
 # --- Class Management Models ---

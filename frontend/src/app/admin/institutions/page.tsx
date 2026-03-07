@@ -7,19 +7,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, Building, MapPin } from "lucide-react"
+import { Plus, Trash2, Building, MapPin, Edit2 } from "lucide-react"
 import { toast } from "sonner"
 import { ConfirmModal } from "@/components/ConfirmModal"
 import { PageTransition } from "@/components/PageTransition"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Search } from "lucide-react"
-import { fetchInstitutes, createInstitute, deleteInstitute } from "@/lib/api"
+import { fetchInstitutes, createInstitute, updateInstitute, deleteInstitute } from "@/lib/api"
 
 interface Institution {
     _id: string
     name: string
     type: string
     location: string
+    city?: string
+    country?: string
     subscription_status: string
     joined_at: string
 }
@@ -31,9 +33,12 @@ export default function InstitutionsPage() {
 
     // Form State
     const [name, setName] = useState("")
-    const [type, setType] = useState("University")
-    const [location, setLocation] = useState("")
+    const [type, setType] = useState("College/University/Institute")
+    const [country, setCountry] = useState("")
+    const [city, setCity] = useState("")
     const [searchQuery, setSearchQuery] = useState("")
+    const [viewFilter, setViewFilter] = useState<"higher_ed" | "school" | "coaching" | "all">("all")
+    const [editId, setEditId] = useState<string | null>(null)
 
     const [confirmOpen, setConfirmOpen] = useState(false)
     const [confirmAction, setConfirmAction] = useState<() => Promise<void>>(async () => { })
@@ -54,20 +59,50 @@ export default function InstitutionsPage() {
         fetchInstitutions()
     }, [])
 
-    const handleCreate = async () => {
-        if (!name || !location) return toast.error("Please fill all fields")
+    const handleSubmit = async () => {
+        if (!name || !country || !city) return toast.error("Please fill all fields")
 
         try {
-            await createInstitute({ name, type, location })
-            toast.success("Institution created")
-            setIsDialogOpen(false)
-            setName("")
-            setLocation("")
+            const location = `${city}, ${country}`
+            if (editId) {
+                await updateInstitute(editId, { name, type, country, city, location })
+                toast.success("Institution updated")
+            } else {
+                await createInstitute({ name, type, country, city, location })
+                toast.success("Institution created")
+            }
+            closeDialog()
             fetchInstitutions()
         } catch (error) {
             console.error(error)
-            toast.error("Error creating institution")
+            toast.error(editId ? "Error updating institution" : "Error creating institution")
         }
+    }
+
+    const openCreateDialog = () => {
+        setEditId(null)
+        setName("")
+        setType("College/University/Institute")
+        setCountry("")
+        setCity("")
+        setIsDialogOpen(true)
+    }
+
+    const openEditDialog = (inst: Institution) => {
+        setEditId(inst._id)
+        setName(inst.name)
+        setType(inst.type || "College/University/Institute")
+        setCountry(inst.country || "")
+        setCity(inst.city || "")
+        setIsDialogOpen(true)
+    }
+
+    const closeDialog = () => {
+        setIsDialogOpen(false)
+        setEditId(null)
+        setName("")
+        setCountry("")
+        setCity("")
     }
 
     const handleDelete = async (id: string) => {
@@ -84,11 +119,44 @@ export default function InstitutionsPage() {
         setConfirmOpen(true)
     }
 
-    const filteredInstitutions = institutions.filter(inst =>
-        (inst.name && inst.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (inst.location && inst.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (inst.type && inst.type.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
+    const filteredInstitutions = institutions
+        .filter(inst => {
+            const matchesSearch = (inst.name && inst.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (inst.city && inst.city.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (inst.country && inst.country.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (inst.location && inst.location.toLowerCase().includes(searchQuery.toLowerCase()));
+
+            if (!matchesSearch) return false;
+
+            if (viewFilter === "higher_ed") {
+                return ["University", "College", "Institute", "College/University/Institute"].includes(inst.type);
+            }
+            if (viewFilter === "school") {
+                return ["School"].includes(inst.type);
+            }
+            if (viewFilter === "coaching") {
+                return ["Private Coaching", "Group Classes", "Private Coaching/Group Classes"].includes(inst.type);
+            }
+            return true;
+        })
+        .sort((a, b) => {
+            const countryA = (a.country || "").toLowerCase();
+            const countryB = (b.country || "").toLowerCase();
+            if (countryA < countryB) return -1;
+            if (countryA > countryB) return 1;
+
+            const cityA = (a.city || "").toLowerCase();
+            const cityB = (b.city || "").toLowerCase();
+            if (cityA < cityB) return -1;
+            if (cityA > cityB) return 1;
+
+            const nameA = a.name.toLowerCase();
+            const nameB = b.name.toLowerCase();
+            if (nameA < nameB) return -1;
+            if (nameA > nameB) return 1;
+
+            return 0;
+        })
 
     return (
         <PageTransition className="space-y-8">
@@ -107,16 +175,19 @@ export default function InstitutionsPage() {
                             className="pl-9 w-full md:w-[300px]"
                         />
                     </div>
-                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                        if (!open) closeDialog();
+                        else setIsDialogOpen(true);
+                    }}>
                         <DialogTrigger asChild>
-                            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200">
+                            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200" onClick={openCreateDialog}>
                                 <Plus className="mr-2 h-4 w-4" /> Add Institution
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Add New Institution</DialogTitle>
-                                <DialogDescription>Enter the details of the new institution.</DialogDescription>
+                                <DialogTitle>{editId ? "Edit Institution" : "Add New Institution"}</DialogTitle>
+                                <DialogDescription>{editId ? "Update the details of the institution." : "Enter the details of the new institution."}</DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
                                 <div className="space-y-2">
@@ -130,20 +201,29 @@ export default function InstitutionsPage() {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="University">University</SelectItem>
-                                            <SelectItem value="College">College</SelectItem>
+                                            <SelectItem value="College/University/Institute">College/University/Institute</SelectItem>
                                             <SelectItem value="School">School</SelectItem>
+                                            <SelectItem value="Private Coaching/Group Classes">Private Coaching/Group Classes</SelectItem>
+                                            <SelectItem value="Other">Other</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Location</Label>
-                                    <Input placeholder="e.g. Mumbai, India" value={location} onChange={(e) => setLocation(e.target.value)} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Country</Label>
+                                        <Input placeholder="e.g. India" value={country} onChange={(e) => setCountry(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>City</Label>
+                                        <Input placeholder="e.g. Mumbai" value={city} onChange={(e) => setCity(e.target.value)} />
+                                    </div>
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleCreate}>Create Institution</Button>
+                                <Button variant="outline" onClick={closeDialog}>Cancel</Button>
+                                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSubmit}>
+                                    {editId ? "Save Changes" : "Create Institution"}
+                                </Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
@@ -152,8 +232,46 @@ export default function InstitutionsPage() {
 
             <Card className="border-slate-200 shadow-sm">
                 <CardHeader>
-                    <CardTitle>All Institutions</CardTitle>
-                    <CardDescription>A complete list of registered institutions.</CardDescription>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <CardTitle>All Institutions</CardTitle>
+                            <CardDescription>A complete list of registered institutions.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setViewFilter("all")}
+                                className={viewFilter === "all" ? "bg-white text-slate-900 shadow-sm hover:bg-white/90" : "text-slate-600 hover:text-slate-900"}
+                            >
+                                All
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setViewFilter("higher_ed")}
+                                className={viewFilter === "higher_ed" ? "bg-white text-slate-900 shadow-sm hover:bg-white/90" : "text-slate-600 hover:text-slate-900"}
+                            >
+                                College/University
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setViewFilter("school")}
+                                className={viewFilter === "school" ? "bg-white text-slate-900 shadow-sm hover:bg-white/90" : "text-slate-600 hover:text-slate-900"}
+                            >
+                                School
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setViewFilter("coaching")}
+                                className={viewFilter === "coaching" ? "bg-white text-slate-900 shadow-sm hover:bg-white/90" : "text-slate-600 hover:text-slate-900"}
+                            >
+                                Coaching
+                            </Button>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <div className="rounded-md border border-slate-100 overflow-hidden">
@@ -161,16 +279,15 @@ export default function InstitutionsPage() {
                             <TableHeader className="bg-slate-50">
                                 <TableRow>
                                     <TableHead className="font-semibold text-slate-600">Institution Name</TableHead>
-                                    <TableHead className="font-semibold text-slate-600">Type</TableHead>
-                                    <TableHead className="font-semibold text-slate-600">Location</TableHead>
-                                    <TableHead className="font-semibold text-slate-600">Status</TableHead>
+                                    <TableHead className="font-semibold text-slate-600">Country</TableHead>
+                                    <TableHead className="font-semibold text-slate-600">City</TableHead>
                                     <TableHead className="text-right font-semibold text-slate-600">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredInstitutions.length === 0 && !isLoading && (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-32 text-center text-slate-500">
+                                        <TableCell colSpan={4} className="h-32 text-center text-slate-500">
                                             <div className="flex flex-col items-center justify-center gap-2">
                                                 <Building className="h-8 w-8 text-slate-200" />
                                                 <p>{searchQuery ? "No institutions match your search." : "No institutions found. Add one to get started."}</p>
@@ -188,18 +305,18 @@ export default function InstitutionsPage() {
                                                 <span className="text-slate-900">{inst.name}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-slate-600">{inst.type || "N/A"}</TableCell>
                                         <TableCell className="text-slate-600">
                                             <div className="flex items-center gap-1.5">
-                                                <MapPin className="h-3.5 w-3.5 text-slate-400" /> {inst.location || "N/A"}
+                                                <MapPin className="h-3.5 w-3.5 text-slate-400" /> {inst.country || "N/A"}
                                             </div>
                                         </TableCell>
-                                        <TableCell>
-                                            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/50 shadow-sm">
-                                                {inst.subscription_status}
-                                            </span>
+                                        <TableCell className="text-slate-600">
+                                            {inst.city || "N/A"}
                                         </TableCell>
                                         <TableCell className="text-right">
+                                            <Button variant="ghost" size="sm" className="text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openEditDialog(inst)}>
+                                                <Edit2 className="h-4 w-4" />
+                                            </Button>
                                             <Button variant="ghost" size="sm" className="text-slate-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(inst._id)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>

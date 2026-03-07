@@ -610,7 +610,17 @@ export async function createInstitute(data: any) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed to create institute");
+    if (!res.ok) throw new Error("Failed to create institution");
+    return res.json();
+}
+
+export async function updateInstitute(id: string, data: any) {
+    const res = await apiFetch(`${API_URL}/institutions/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Failed to update institution");
     return res.json();
 }
 

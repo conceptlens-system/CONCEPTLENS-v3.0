@@ -21,8 +21,23 @@ async def create_institution(institution: InstitutionCreate):
 
 @router.delete("/{id}")
 async def delete_institution(id: str):
+    from bson import ObjectId
     db = await get_database()
     result = await db.institutions.delete_one({"_id": ObjectId(id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Institution not found")
     return {"status": "deleted"}
+
+@router.put("/{id}", response_model=Institution)
+async def update_institution(id: str, institution: InstitutionCreate):
+    from bson import ObjectId
+    db = await get_database()
+    inst_dict = institution.model_dump()
+    result = await db.institutions.update_one(
+        {"_id": ObjectId(id)},
+        {"$set": inst_dict}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Institution not found")
+    updated_inst = await db.institutions.find_one({"_id": ObjectId(id)})
+    return updated_inst

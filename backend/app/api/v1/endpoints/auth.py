@@ -4,6 +4,7 @@ from app.core.security import get_password_hash, verify_password, create_access_
 from app.db.mongodb import get_database
 from fastapi.responses import JSONResponse
 from bson import ObjectId
+from datetime import datetime
 
 router = APIRouter()
 
@@ -32,6 +33,29 @@ async def signup(user: UserCreate, db = Depends(get_database)):
     
     # Insert
     new_user = await db["users"].insert_one(user_dict)
+    
+    # Optional: Automatically create the Institution if one was provided in the extra fields
+    # Since the frontend sends `institute_name`, `country`, `city` loosely for now:
+    extra_data = user.dict(exclude_unset=True)
+    inst_name = extra_data.get("institute_name")
+    country = extra_data.get("country", "")
+    city = extra_data.get("city", "")
+    
+    if inst_name:
+        existing_inst = await db["institutions"].find_one({"name": {"$regex": f"^{inst_name}$", "$options": "i"}})
+        if not existing_inst:
+            # Create a basic institution record
+            new_inst = {
+                "name": inst_name,
+                "type": "School", # Defaulting to School for student signup unless specified
+                "location": f"{city}, {country}".strip(", "),
+                "city": city,
+                "country": country,
+                "subscription_status": "Active",
+                "joined_at": datetime.utcnow()
+            }
+            await db["institutions"].insert_one(new_inst)
+
     created_user = await db["users"].find_one({"_id": new_user.inserted_id})
     return created_user
 

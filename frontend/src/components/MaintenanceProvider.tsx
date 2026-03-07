@@ -37,6 +37,7 @@ function MaintenanceContent({ children }: { children: React.ReactNode }) {
 
         const handleMaintenanceEvent = async () => {
             setIsOpen(true);
+            sessionStorage.removeItem("maintenance_acknowledged");
             // We used to sign out all users here, but we will preserve their active session so they can resume after the maintenance is complete.
             // await signOut({ redirect: false });
 
@@ -61,9 +62,15 @@ function MaintenanceContent({ children }: { children: React.ReactNode }) {
 
             try {
                 const settings = await fetchPublicSettings();
+
+                // Helper to check if we should show the modal
+                const shouldShowModal = () => {
+                    return sessionStorage.getItem("maintenance_acknowledged") !== "true";
+                };
+
                 if (settings.maintenance_mode) {
                     if (settings.maintenance_type === "instant") {
-                        if (!isOpen) {
+                        if (!isOpen && shouldShowModal()) {
                             setIsOpen(true);
                             setMaintenanceInfo("The platform is temporarily offline for urgent maintenance.");
                             if (session?.user) await signOut({ redirect: false });
@@ -75,7 +82,7 @@ function MaintenanceContent({ children }: { children: React.ReactNode }) {
                         const now = new Date();
 
                         if (start && end && now >= start && now <= end) {
-                            if (!isOpen) {
+                            if (!isOpen && shouldShowModal()) {
                                 setIsOpen(true);
                                 setMaintenanceInfo(settings.scheduled_maintenance_info || "The platform is currently offline for scheduled maintenance.");
                                 if (session?.user) await signOut({ redirect: false });
@@ -83,11 +90,13 @@ function MaintenanceContent({ children }: { children: React.ReactNode }) {
                         } else if (isOpen) {
                             // Time passed, we are free!
                             setIsOpen(false);
+                            sessionStorage.removeItem("maintenance_acknowledged");
                         }
                     }
-                } else if (!settings.maintenance_mode && isOpen) {
+                } else {
                     // Turn it off when the toggle is flipped off natively
-                    setIsOpen(false);
+                    if (isOpen) setIsOpen(false);
+                    sessionStorage.removeItem("maintenance_acknowledged");
                 }
             } catch (error) {
                 console.error("Failed to check maintenance status");
@@ -100,11 +109,11 @@ function MaintenanceContent({ children }: { children: React.ReactNode }) {
         // Then poll every 5 seconds for snappier transitions
         interval = setInterval(checkMaintenanceStatus, 5000);
         return () => clearInterval(interval);
-    }, [session, isOpen]);
+    }, [session, isOpen, pathname]);
 
     const handleClose = () => {
-        // We only allow closing if there's no active real-time maintenance block
-        // In most cases, it should dynamically disappear via the polling above.
+        // Track acknowledgement for the current session
+        sessionStorage.setItem("maintenance_acknowledged", "true");
         setIsOpen(false);
         if (searchParams.get('maintenance') === 'true') {
             router.replace(pathname);
