@@ -216,164 +216,143 @@ export default function ProfessorDashboard() {
                 </motion.div>
             </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: Quick Actions & Chart */}
-                <div className="lg:col-span-2 space-y-8">
-
-                    {/* Quick Actions */}
-                    <section>
-                        <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                            <Zap className="h-5 w-5 text-indigo-500" /> Quick Actions
-                        </h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <DashboardActionCard
-                                href="/professor/exams/create"
-                                title="Create Exam"
-                                description="Set up a new assessment"
-                                icon={Plus}
-                                color="text-white"
-                                bgClassName="bg-gradient-to-br from-indigo-500 to-purple-600"
-                            />
-                            <DashboardActionCard
-                                href="/professor/reports"
-                                title="View Reports"
-                                description="Analyze student performance"
-                                icon={BarChart3}
-                                color="text-indigo-600"
-                                bgClassName="bg-white hover:bg-slate-50 border border-slate-200"
-                            />
-                            <DashboardActionCard
-                                href="/professor/classes"
-                                title="Manage Classes"
-                                description="View students and rosters"
-                                icon={Users}
-                                color="text-blue-600"
-                                bgClassName="bg-white hover:bg-slate-50 border border-slate-200"
-                            />
-                            <DashboardActionCard
-                                href="/professor/inbox"
-                                title="Check Inbox"
-                                description="Review notifications"
-                                icon={Mail}
-                                color="text-amber-600"
-                                bgClassName="bg-white hover:bg-slate-50 border border-slate-200"
-                            />
-                        </div>
-                    </section>
-
-                    {/* Performance Chart */}
-                    <section>
-                        <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                            <TrendingUp className="h-5 w-5 text-emerald-500" /> Performance Trends
-                        </h2>
-                        <Card className="border-none shadow-xl bg-white/70 dark:bg-black/40 backdrop-blur-xl">
-                            <CardContent className="pt-6 h-[350px]">
-                                {loading ? (
-                                    <Skeleton className="w-full h-full rounded-lg" />
-                                ) : performanceData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={performanceData}>
-                                            <defs>
-                                                <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#818cf8" stopOpacity={0.3} />
-                                                    <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                            <XAxis
-                                                dataKey="name"
-                                                axisLine={false}
-                                                tickLine={false}
-                                                tick={{ fill: '#64748b', fontSize: 12 }}
-                                                dy={10}
-                                            />
-                                            <YAxis
-                                                axisLine={false}
-                                                tickLine={false}
-                                                tick={{ fill: '#64748b', fontSize: 12 }}
-                                            />
-                                            <Tooltip
-                                                contentStyle={{
-                                                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                                    borderRadius: '12px',
-                                                    border: 'none',
-                                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                                                    backdropFilter: 'blur(8px)'
-                                                }}
-                                            />
-                                            <Area
-                                                type="monotone"
-                                                dataKey="score"
-                                                stroke="#4f46e5"
-                                                strokeWidth={3}
-                                                fillOpacity={1}
-                                                fill="url(#colorScore)"
-                                            />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center text-slate-400 flex-col gap-2">
-                                        <BarChart3 className="h-10 w-10 opacity-20" />
-                                        <p>No assessment data available yet</p>
+            <div className="grid gap-6 lg:grid-cols-3 mt-8">
+                {/* Left (1/3): Quick Links */}
+                <div className="lg:col-span-1">
+                    <Card className="border-indigo-100 dark:border-indigo-900/50 shadow-sm bg-gradient-to-b from-white to-indigo-50/30 dark:from-slate-900 dark:to-indigo-950/30 h-full flex flex-col">
+                        <CardHeader className="pb-3 border-b border-indigo-50 dark:border-indigo-900/30">
+                            <CardTitle className="text-md font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                <Zap className="w-5 h-5 text-indigo-500" /> Quick Links
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0 flex flex-col h-full">
+                            <div className="flex flex-col flex-1 divide-y divide-slate-100 dark:divide-white/5">
+                                <Link href="/professor/inbox" className="px-5 py-4 flex items-center justify-between hover:bg-white/80 dark:hover:bg-white/5 transition-colors group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-amber-100 dark:bg-amber-500/20 p-2.5 rounded-lg group-hover:bg-amber-500 transition-colors relative">
+                                            <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400 group-hover:text-white" />
+                                            {notifications.length > 0 && (
+                                                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500 border-2 border-white dark:border-slate-900"></span>
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold text-slate-700 dark:text-slate-200">Inbox & Notifications</span>
+                                            {notifications.length > 0 && (
+                                                <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                                                    {notifications.length} new message{notifications.length > 1 ? 's' : ''}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </section>
+                                    <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-amber-500 transition-transform group-hover:translate-x-1" />
+                                </Link>
+                                <Link href="/professor/exams/create" className="px-5 py-4 flex items-center justify-between hover:bg-white/80 dark:hover:bg-white/5 transition-colors group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-indigo-100 dark:bg-indigo-500/20 p-2.5 rounded-lg group-hover:bg-indigo-500 transition-colors">
+                                            <Plus className="w-5 h-5 text-indigo-600 dark:text-indigo-400 group-hover:text-white" />
+                                        </div>
+                                        <span className="font-semibold text-slate-700 dark:text-slate-200">Create Exam</span>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-indigo-500 transition-transform group-hover:translate-x-1" />
+                                </Link>
+                                <Link href="/professor/classes" className="px-5 py-4 flex items-center justify-between hover:bg-white/80 dark:hover:bg-white/5 transition-colors group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-blue-100 dark:bg-blue-500/20 p-2.5 rounded-lg group-hover:bg-blue-500 transition-colors">
+                                            <Users className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:text-white" />
+                                        </div>
+                                        <span className="font-semibold text-slate-700 dark:text-slate-200">Manage Classes</span>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-transform group-hover:translate-x-1" />
+                                </Link>
+                                <Link href="/professor/misconceptions" className="px-5 py-4 flex items-center justify-between hover:bg-white/80 dark:hover:bg-white/5 transition-colors group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-rose-100 dark:bg-rose-500/20 p-2.5 rounded-lg group-hover:bg-rose-500 transition-colors">
+                                            <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 group-hover:text-white" />
+                                        </div>
+                                        <span className="font-semibold text-slate-700 dark:text-slate-200">Misconceptions</span>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-rose-500 transition-transform group-hover:translate-x-1" />
+                                </Link>
+                                <Link href="/professor/curriculum" className="px-5 py-4 flex items-center justify-between hover:bg-white/80 dark:hover:bg-white/5 transition-colors group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-emerald-100 dark:bg-emerald-500/20 p-2.5 rounded-lg group-hover:bg-emerald-500 transition-colors">
+                                            <BookOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400 group-hover:text-white" />
+                                        </div>
+                                        <span className="font-semibold text-slate-700 dark:text-slate-200">Curriculum & Syllabus</span>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-transform group-hover:translate-x-1" />
+                                </Link>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
-                {/* Right Column: Recent Activity */}
-                <div className="lg:col-span-1">
+                {/* Right (2/3): Performance Chart */}
+                <div className="lg:col-span-2 space-y-6">
                     <section className="h-full">
-                        <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                            <Bell className="h-5 w-5 text-amber-500" /> Notifications
-                        </h2>
-                        <Card className="border-none shadow-xl bg-white/70 dark:bg-black/40 backdrop-blur-xl flex flex-col">
-                            <CardContent className="p-0 flex-1 flex flex-col">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <TrendingUp className="w-5 h-5 text-emerald-500" /> Performance Trends
+                            </h2>
+                        </div>
+                        <Card className="border-indigo-100 dark:border-indigo-900/50 shadow-sm bg-white dark:bg-slate-900 h-full min-h-[400px]">
+                            <CardContent className="p-6 h-full flex flex-col">
                                 {loading ? (
-                                    <div className="p-4 space-y-4 flex-1">
-                                        {[1, 2, 3].map(i => (
-                                            <div key={i} className="flex gap-4 items-center">
-                                                <Skeleton className="h-2 w-2 rounded-full" />
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-4 w-3/4" />
-                                                    <Skeleton className="h-3 w-1/4" />
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : notifications.length > 0 ? (
-                                    <div className="flex flex-col">
-                                        <div className="divide-y divide-slate-100 dark:divide-white/10 flex-1">
-                                            {notifications.slice(0, 3).map((n, i) => (
-                                                <div key={i} className="p-4 hover:bg-white/50 dark:hover:bg-white/5 transition-colors flex gap-4 items-start group cursor-pointer" onClick={() => window.location.href = '/professor/inbox'}>
-                                                    <div className="mt-1 h-2 w-2 rounded-full bg-indigo-500 shrink-0 ring-4 ring-indigo-100 dark:ring-indigo-900/30" />
-                                                    <div className="flex-1">
-                                                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-tight group-hover:text-indigo-600 transition-colors line-clamp-2">
-                                                            {n.message}
-                                                        </p>
-                                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                                            {n.created_at ? format(new Date(n.created_at), 'MMM d, h:mm a') : 'Just now'}
-                                                        </p>
-                                                    </div>
-                                                    <ChevronRight className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1" />
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="p-4 border-t border-slate-100 dark:border-white/10 mt-auto">
-                                            <Link href="/professor/inbox" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center justify-center w-full group py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg transition-colors">
-                                                <span>View all notifications</span>
-                                                <ChevronRight className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1" />
-                                            </Link>
-                                        </div>
+                                    <Skeleton className="w-full h-[350px] rounded-lg" />
+                                ) : performanceData.length > 0 ? (
+                                    <div className="w-full flex-1 min-h-[350px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={performanceData}>
+                                                <defs>
+                                                    <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#818cf8" stopOpacity={0.3} />
+                                                        <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                                                <XAxis
+                                                    dataKey="name"
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    tick={{ fill: '#64748b', fontSize: 12 }}
+                                                    dy={10}
+                                                />
+                                                <YAxis
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    tick={{ fill: '#64748b', fontSize: 12 }}
+                                                    dx={-10}
+                                                />
+                                                <Tooltip
+                                                    contentStyle={{
+                                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                                        borderRadius: '10px',
+                                                        border: '1px solid #e2e8f0',
+                                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                                        padding: '8px 12px'
+                                                    }}
+                                                    itemStyle={{ color: '#4f46e5', fontWeight: 'bold' }}
+                                                />
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey="score"
+                                                    stroke="#4f46e5"
+                                                    strokeWidth={3}
+                                                    fillOpacity={1}
+                                                    fill="url(#colorScore)"
+                                                />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
                                     </div>
                                 ) : (
-                                    <div className="p-8 text-center text-slate-500 flex flex-col justify-center items-center py-12">
-                                        <div className="h-16 w-16 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
-                                            <Bell className="h-8 w-8 text-slate-300" />
+                                    <div className="h-[350px] w-full flex items-center justify-center text-slate-400 flex-col gap-3">
+                                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-full">
+                                            <BarChart3 className="h-8 w-8 opacity-40" />
                                         </div>
-                                        <p className="font-medium text-slate-600 dark:text-slate-300">No new notifications</p>
-                                        <p className="text-xs mt-1 text-slate-400">You're all caught up!</p>
+                                        <p className="font-medium">No assessment data available yet</p>
                                     </div>
                                 )}
                             </CardContent>
@@ -400,26 +379,5 @@ function StatCard({ title, icon: Icon, value, subtext, color, gradient }: any) {
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{subtext}</p>
             </CardContent>
         </Card>
-    )
-}
-
-function DashboardActionCard({ href, title, description, icon: Icon, color, bgClassName }: any) {
-    return (
-        <Link href={href} className="group h-full">
-            <Card className={`h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer overflow-hidden ${bgClassName}`}>
-                <CardContent className="p-6 flex items-start gap-4 h-full">
-                    <div className={`p-3 rounded-xl ${color === 'text-white' ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-800'} backdrop-blur-sm group-hover:scale-110 transition-transform`}>
-                        <Icon className={`h-6 w-6 ${color}`} />
-                    </div>
-                    <div className="flex-1">
-                        <h3 className={`font-semibold text-lg ${color === 'text-white' ? 'text-white' : 'text-slate-900 dark:text-white'} mb-1`}>{title}</h3>
-                        <p className={`text-sm ${color === 'text-white' ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'}`}>{description}</p>
-                    </div>
-                    {color !== 'text-white' && (
-                        <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-indigo-500 transition-colors self-center" />
-                    )}
-                </CardContent>
-            </Card>
-        </Link>
     )
 }
