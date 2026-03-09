@@ -100,6 +100,22 @@ export async function generateRemediationPlan(id: string, token: string) {
     return res.json();
 }
 
+export async function generateLegalStrategy(scenario: string, token: string) {
+    const res = await apiFetch(`${API_URL}/legal-strategy/generate`, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ scenario })
+    });
+    if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || "Failed to generate legal strategy");
+    }
+    return res.json();
+}
+
 export async function askMisconceptionAI(id: string, message: string, token: string) {
     const res = await apiFetch(`${API_URL}/analytics/misconceptions/${id}/chat`, {
         method: "POST",

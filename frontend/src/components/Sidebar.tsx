@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Activity, AlertCircle, BookOpen, CheckCircle2, Building, Users, User, GraduationCap, ClipboardList, BarChart3, LogOut, Mail, FileText, LayoutDashboard, Settings, Brain } from "lucide-react"
+import { Activity, AlertCircle, BookOpen, CheckCircle2, Building, Users, User, GraduationCap, ClipboardList, BarChart3, LogOut, Mail, FileText, LayoutDashboard, Settings, Brain, Scale } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -52,6 +52,7 @@ export function Sidebar({ className, onLinkClick }: SidebarProps) {
         { href: "/professor/curriculum", label: "Curriculum", icon: BookOpen },
         { href: "/professor/exams", label: "Exams", icon: ClipboardList },
         { href: "/professor/misconceptions", label: "Misconceptions", icon: AlertCircle },
+        { href: "/professor/legal-strategy", label: "Legal Strategy", icon: Scale },
         { href: "/professor/inbox", label: "Inbox", icon: Mail, badge: unreadCount },
         { href: "/professor/classes", label: "My Classes", icon: Users },
         { href: "/professor/profile", label: "Profile", icon: User },
@@ -60,6 +61,7 @@ export function Sidebar({ className, onLinkClick }: SidebarProps) {
     const studentLinks = [
         { href: "/student/classes", label: "My Classes", icon: BookOpen },
         { href: "/student/exams", label: "My Exams", icon: ClipboardList },
+        { href: "/student/legal-strategy", label: "Legal Strategy", icon: Scale },
         { href: "/student/inbox", label: "Inbox", icon: Mail, badge: unreadCount },
         { href: "/student/profile", label: "Profile", icon: User },
     ]

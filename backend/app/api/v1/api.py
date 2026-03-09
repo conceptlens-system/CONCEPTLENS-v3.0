@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import ingest, analytics, teacher, subjects, exams, auth, institutions, users, classes, notifications, contact, syllabus, ai_exams, admin_analytics, settings, announcements, audit_logs, ai_usage, server_admin, practice, leaderboard
+from app.api.v1.endpoints import ingest, analytics, teacher, subjects, exams, auth, institutions, users, classes, notifications, contact, syllabus, ai_exams, admin_analytics, settings, announcements, audit_logs, ai_usage, server_admin, practice, leaderboard, legal_strategy
 
 api_router = APIRouter()
 
@@ -24,3 +24,4 @@ api_router.include_router(ai_usage.router, prefix="/ai-usage", tags=["ai-usage"]
 api_router.include_router(server_admin.router, prefix="/server", tags=["server-admin"])
 api_router.include_router(practice.router, prefix="/practice", tags=["practice"])
 api_router.include_router(leaderboard.router, prefix="/leaderboard", tags=["leaderboard"])
+api_router.include_router(legal_strategy.router, prefix="/legal-strategy", tags=["legal-strategy"])
